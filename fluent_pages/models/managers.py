@@ -1,6 +1,7 @@
 """
 The manager class for the CMS models
 """
+from django.conf import settings
 from django.db.models.query_utils import Q
 from polymorphic_tree.managers import PolymorphicMPTTModelManager, PolymorphicMPTTQuerySet
 from fluent_pages.utils.db import DecoratingQuerySet
@@ -57,12 +58,17 @@ class UrlNodeQuerySet(PolymorphicMPTTQuerySet, DecoratingQuerySet):
         return paths
 
 
-    def published(self):
+    def published(self, limit_to_site=True):
         """
         Return only published pages
         """
         from fluent_pages.models import UrlNode   # the import can't be globally, that gives a circular dependency
-        return self \
+        # BQK: Hack for required multi-site workflow.
+        if limit_to_site:
+            qs = self.filter(parent_site_id=settings.SITE_ID)
+        else:
+            qs = self
+        return qs \
             .filter(status=UrlNode.PUBLISHED) \
             .filter(
                 Q(publication_date__isnull=True) |
